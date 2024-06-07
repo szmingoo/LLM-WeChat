@@ -12,14 +12,15 @@ import httpx
 from typing import Dict, Any
 
 async def get_llm(query: str) -> str:
-    async with httpx.AsyncClient() as client:
+    timeout_seconds = 10  # 设置超时时间为10秒，根据实际情况调整
+    async with httpx.AsyncClient(timeout=httpx.Timeout(timeout_seconds)) as client:
         url = 'https://dashscope.aliyuncs.com/api/v1/services/aigc/text-generation/generation'
         headers = {
-            'Authorization': 'Bearer ',#输入你的千问key
+            'Authorization': 'Bearer sk-52b96574fc1949a380590eabc9403e30',
             'Content-Type': 'application/json'
         }
         data: Dict[str, Any] = {
-            "model": "qwen-turbo",
+            "model": "qwen-plus",
             "input": {
                 "messages": [
                     {
@@ -33,10 +34,22 @@ async def get_llm(query: str) -> str:
                 ]
             },
         }
-        response = await client.post(url, json=data, headers=headers)
-        response.raise_for_status()  # 这会抛出异常，如果响应状态码不是200
-        answer = response.json()["output"]["text"]
+        try:
+            response = await client.post(url, json=data, headers=headers)
+            response.raise_for_status()
+            answer = response.json()["output"]["text"]
+        except httpx.TimeoutException as e:
+            print(f"请求超时: {e}")
+            # 根据需求处理超时情况，比如返回特定的错误信息或者重试
+            answer = "请求超时，请稍后再试。"
+        except httpx.HTTPStatusError as e:
+            print(f"HTTP错误: {e}")
+            answer = "服务器错误，请稍后再试。"
+        except Exception as e:
+            print(f"发生错误: {e}")
+            answer = "发生了未知错误。"
         return answer
+        
 @app.get("/")
 async def root(request: Request):
     query_params = request.query_params

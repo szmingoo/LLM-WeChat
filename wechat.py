@@ -3,12 +3,10 @@ from fastapi.responses import PlainTextResponse
 import hashlib
 import xml.etree.ElementTree as ET
 from xml.etree.ElementTree import ParseError
-from typing import Optional
+import httpx
+from typing import Dict, Any,Optional
 import time
 app = FastAPI()
-
-import httpx
-from typing import Dict, Any
 
 async def get_llm(query: str) -> str:
     timeout_seconds = 10  # 设置超时时间为10秒，根据实际情况调整
@@ -48,7 +46,8 @@ async def get_llm(query: str) -> str:
             print(f"发生错误: {e}")
             answer = "发生了未知错误。"
         return answer
-        
+
+
 @app.get("/")
 async def root(request: Request):
     query_params = request.query_params
@@ -64,6 +63,8 @@ async def root(request: Request):
         return PlainTextResponse(echostr)
     else:
         return PlainTextResponse("Invalid signature", status_code=403)
+
+
 @app.post("/")
 async def handle_post(request: Request):
     try:

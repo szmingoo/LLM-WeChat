@@ -6,7 +6,6 @@ from xml.etree.ElementTree import ParseError
 from typing import Optional
 import time
 app = FastAPI()
-import asyncio
 
 import httpx
 from typing import Dict, Any

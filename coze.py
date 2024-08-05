@@ -132,8 +132,8 @@ class Coze:
 
 
 import os
-COZE_API_TOKEN="pat_u9wuAqI6PLf6M2qkLBoWLphfiUcDVeWBMSg9J01GMSLAezaH5a1gzdcmg02DcDFS"
-COZE_BOT_ID="7384067618791686144"
+COZE_API_TOKEN="pat_xxxx"
+COZE_BOT_ID="xxxx"
 os.environ['COZE_API_TOKEN']=COZE_API_TOKEN
 os.environ['COZE_BOT_ID']=COZE_BOT_ID
 chat=Coze(api_token=os.environ['COZE_API_TOKEN'],bot_id=os.environ['COZE_BOT_ID'],max_chat_rounds=20,stream=False)

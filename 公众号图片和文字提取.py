@@ -15,7 +15,10 @@ async def extract_image_data_src(url):
         image_urls = await page.evaluate('''() => {
             return Array.from(document.querySelectorAll('img[data-src]'))
                 .map(img => img.getAttribute('data-src'))
-                .filter(src => src.startsWith('https://mmbiz.qpic.cn/sz_mmbiz_jpg/'));
+                .filter(src => 
+                    src.startsWith('https://mmbiz.qpic.cn/sz_mmbiz_jpg/') || 
+                    src.startsWith('https://mmbiz.qpic.cn/mmbiz_png/')
+                );
         }''')
 
         await browser.close()
@@ -74,7 +77,7 @@ async def main(url, folder, output_pdf_path):
 
 
 if __name__ == "__main__":
-    url = "https://mp.weixin.qq.com/s/K2csiuv7Xe9EWv2V2WKUcQ"  # 替换为您的目标 URL
+    url = "https://mp.weixin.qq.com/s/s7OnAoKuLM4UFdO_jIicUw"  # 替换为您的目标 URL
     folder = "images"  # Folder to save images
     output_pdf_path = "output.pdf"
     asyncio.run(main(url, folder, output_pdf_path))

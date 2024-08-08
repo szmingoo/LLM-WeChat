@@ -1,3 +1,5 @@
+url = "https://mp.weixin.qq.com/s/m-bhr27BcdCOS7mQjIztEw"  # 替换为您的目标 URL
+
 import os
 import random
 import string
@@ -39,30 +41,36 @@ async def download_image(session, url, folder):
             print(f"Downloaded {url} to {filepath}")
 
 
-async def save_page_as_pdf(url, output_pdf_path):
+async def save_text(url, output_txt_path):
     async with async_playwright() as p:
         browser = await p.chromium.launch(headless=True)
         page = await browser.new_page()
         await page.goto(url, wait_until='networkidle')
-
-        # 使用 JavaScript 删除指定的 div、img 标签和 select 标签
-        await page.evaluate('''() => {
-            const metaContent = document.getElementById('meta_content');
-            if (metaContent) {
-                metaContent.remove();
-            }
-            const images = document.querySelectorAll('img');
-            images.forEach(img => img.remove());
-            const profileCards = document.querySelectorAll('.appmsg_card_context.wx_profile_card.wx-root.wx_tap_card.wx_card_root.common-webchat');
-            profileCards.forEach(card => card.remove());
+        # 提取所有 p 标签下第一个 span 标签的文本，过滤特定内容
+        span_texts = await page.evaluate('''() => {
+            const paragraphs = document.querySelectorAll('p');
+            let texts = [];
+            paragraphs.forEach(p => {
+                const firstSpan = p.querySelector('span');
+                if (firstSpan) {
+                    const text = firstSpan.innerText.trim();
+                    if (text !== '愚昧成为主流 清醒便是犯罪' && text !== '- THE END -') {
+                        texts.push(text);
+                    }
+                }
+            });
+            return texts;
         }''')
 
-        # 保存页面为 PDF
-        await page.pdf(path=output_pdf_path, format='A4')
+        # 将提取的文本保存到 txt 文件中
+        with open(output_txt_path, 'a+', encoding='utf-8') as f:
+            for text in span_texts:
+                f.write(text + '\n')
+
         await browser.close()
 
 
-async def main(url, folder, output_pdf_path):
+async def main(url, folder, output_txt_path):
     if not os.path.exists(folder):
         os.makedirs(folder)
 
@@ -73,11 +81,84 @@ async def main(url, folder, output_pdf_path):
         tasks = [download_image(session, image_url, folder) for image_url in image_urls]
         await asyncio.gather(*tasks)
 
-    await save_page_as_pdf(url, output_pdf_path)
+    await save_text(url, output_txt_path)
+
+folder = "images"  # Folder to save images
+output_txt_path = "content.txt"
+asyncio.run(main(url, folder, output_txt_path))
 
 
-if __name__ == "__main__":
-    url = "https://mp.weixin.qq.com/s/s7OnAoKuLM4UFdO_jIicUw"  # 替换为您的目标 URL
-    folder = "images"  # Folder to save images
-    output_pdf_path = "output.pdf"
-    asyncio.run(main(url, folder, output_pdf_path))
+import os
+import aiohttp
+import asyncio
+from bs4 import BeautifulSoup
+import re
+import random
+import string
+
+
+async def fetch(session, url):
+    async with session.get(url) as response:
+        return await response.text(), response.status
+
+
+async def get_og_title(session, url):
+    html, status = await fetch(session, url)
+    if status == 200:
+        soup = BeautifulSoup(html, 'html.parser')
+        og_title_meta = soup.find('meta', property="og:title")
+        if og_title_meta and og_title_meta.get('content'):
+            return og_title_meta['content']
+        else:
+            return 'og:title meta tag not found'
+    else:
+        return f'Failed to retrieve content, status code: {status}'
+
+
+async def get_og_image(session, url):
+    html, status = await fetch(session, url)
+    if status == 200:
+        soup = BeautifulSoup(html, 'html.parser')
+        og_image_meta = soup.find('meta', property="og:image")
+        if og_image_meta and og_image_meta.get('content'):
+            return og_image_meta['content']
+        else:
+            return 'og:image meta tag not found'
+    else:
+        return f'Failed to retrieve content, status code: {status}'
+
+
+async def download_cover_image(session, url, directory):
+    if not os.path.exists(directory):
+        os.makedirs(directory)
+
+    random_filename = f"{generate_random_filename()}.jpg"
+    img_path = os.path.join(directory, random_filename)
+
+    async with session.get(url) as response:
+        if response.status == 200:
+            img_data = await response.read()
+            with open(img_path, 'wb') as handler:
+                handler.write(img_data)
+            return img_path
+        else:
+            return f'Failed to download image, status code: {response.status}'
+
+async def header_main(url):
+    async with aiohttp.ClientSession() as session:
+        og_title = await get_og_title(session, url)
+        og_image_url = await get_og_image(session, url)
+
+        print(og_image_url)
+        print(og_title)
+
+        with open('title.txt', 'a+', encoding='utf-8') as file:
+            file.write(og_title + '\n')
+
+        if "http" in og_image_url:
+            img_path = await download_cover_image(session, og_image_url, 'cover')
+            print(f"Image downloaded and saved at: {img_path}")
+        else:
+            print(og_image_url)
+
+asyncio.run(header_main(url))

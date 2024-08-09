@@ -13,7 +13,7 @@ async def get_llm(query: str) -> str:
     async with httpx.AsyncClient(timeout=httpx.Timeout(timeout_seconds)) as client:
         url = 'https://dashscope.aliyuncs.com/api/v1/services/aigc/text-generation/generation'
         headers = {
-            'Authorization': 'Bearer sk-',
+            'Authorization': 'Bearer sk-',#修改成你的apiKey
             'Content-Type': 'application/json'
         }
         data: Dict[str, Any] = {

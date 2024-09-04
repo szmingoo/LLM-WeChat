@@ -1,0 +1,93 @@
+import requests
+import json
+import urllib.parse as parse
+import random
+
+APPID = 'xxxxxx'
+APPSECRET = 'xxxx'
+
+def get_wxCode_token():
+    textmod = {"grant_type": "client_credential", "appid": APPID, "secret": APPSECRET}
+    textmod = parse.urlencode(textmod)
+    header_dict = {
+        "User-Agent": 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3'
+    }
+    url = "https://api.weixin.qq.com/cgi-bin/token"
+    response = requests.get(url + "?" + textmod, headers=header_dict)
+    res = response.json()
+    # print("res:", res)
+    return res["access_token"]
+access_token=dict(access_token=get_wxCode_token())['access_token']
+print(access_token)
+
+
+def updFm(file_path, file_name):
+    url = 'https://api.weixin.qq.com/cgi-bin/material/add_material?access_token={}&type=image'.format(access_token)
+    request_file = {'media': ('{}.jpg'.format(file_name), open(file_path, 'rb'), 'image/jpeg')}
+    vx_res = requests.post(url=url, files=request_file)
+    obj = json.loads(vx_res.content)
+    return obj['media_id']
+
+fmId=updFm('D:\\codemylife\\job-requirements\\back\\test\\cover\\DDpGml.jpg', 'DDpGml')
+# print(updFm('D:\\codemylife\\job-requirements\\back\\test\\cover\\DDpGml.jpg', 'DDpGml'))
+
+# content_soup = root_soup.select('.entry-content')[0]
+# imgs = content_soup.select('.wp-block-image')
+# fmId = updFm(imgs[0].img['src'], title)
+
+
+def updCG(title, summary, content, fmId):
+    if len(title) > 64:
+        title = title[:63]
+    if len(summary) > 120:
+        summary = summary[:119]
+    url = 'https://api.weixin.qq.com/cgi-bin/draft/add?access_token=' + access_token
+    data = {
+        "articles": [
+            {
+                "title": title,
+                "author": '作者',
+                "digest": summary,
+                "content": content,
+                "show_cover_pic": 1,
+                "need_open_comment": 0,
+                "only_fans_can_comment": 0,
+                "thumb_media_id": fmId
+            }
+        ]
+    }
+    vx_res = requests.post(url=url, data=json.dumps(data, ensure_ascii=False).encode("utf-8"))
+    obj = json.loads(vx_res.content)
+    # print(obj)
+    return obj['media_id']
+
+import os
+def updImg(file_path):
+    base_folder = './temp/'
+    # 确保临时文件夹存在
+    if not os.path.exists(base_folder):
+        os.makedirs(base_folder)
+    # 生成随机文件名
+    file_name = '{}.jpg'.format(random.randint(10000, 99999))
+    temp_file_path = base_folder + file_name
+    # 复制文件到临时路径
+    with open(file_path, 'rb') as f:
+        with open(temp_file_path, 'wb') as temp_file:
+            temp_file.write(f.read())
+    # 上传图片到微信服务器
+    vx_img_url = 'https://api.weixin.qq.com/cgi-bin/media/uploadimg?access_token={}'.format(access_token)
+    request_file = {'media': (file_name, open(temp_file_path, 'rb'), 'image/jpeg')}
+    # 发送请求
+    vx_res = requests.post(url=vx_img_url, files=request_file)
+    obj = json.loads(vx_res.content)
+    # 返回图片 URL
+    return obj['url']
+
+img_url=updImg('D:\\codemylife\\job-requirements\\back\\test\\images\\1uuBbl.jpg')
+
+content = f"""
+    <p>Here is an image:</p>
+    <img src={img_url} />
+    """
+
+updCG("句子虽短，句句入心", "半成文的七条法号", content, fmId)
